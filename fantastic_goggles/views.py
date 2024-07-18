@@ -28,8 +28,8 @@ def sign_in_or_sign_up(request: Request | HttpRequest) -> HttpResponseRedirect:
         realm_name=settings.KEYCLOAK_REALM,
         client_id=settings.KEYCLOAK_CLIENT,
     )
-    callback_url = request.build_absolute_uri(reverse("callback"))
-    url = keycloak.auth_url(callback_url, scope="openid", state=str(uuid.uuid4()))
+    redirect_uri = request.build_absolute_uri(reverse("callback"))
+    url = keycloak.auth_url(redirect_uri, scope="openid", state=str(uuid.uuid4()))
     return redirect(url)
 
 
@@ -53,11 +53,11 @@ def signin_callback(request: Request | HttpRequest) -> HttpResponseRedirect:
     )
     if code := request.query_params.get("code"):
         try:
-            callback_url = settings.KEYCLOAK_REDIRECT_URI
+            redirect_uri = request.build_absolute_uri(reverse("callback"))
             user_token = keycloak.token(
                 code=code,
                 grant_type=["authorization_code"],
-                redirect_uri=callback_url,
+                redirect_uri=redirect_uri,
             )
             user_info = keycloak.decode_token(user_token["access_token"])
             UserModel = get_user_model()
