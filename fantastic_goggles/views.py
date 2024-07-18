@@ -55,3 +55,87 @@ def sign_in_or_sign_up(request: Request | HttpRequest) -> HttpResponseRedirect:
     callback_url = settings.KEYCLOAK_REDIRECT_URI
     url = keycloak.auth_url(callback_url, scope="openid", state=str(uuid.uuid4()))
     return redirect(url)
+
+
+@async_api_view(["GET"])
+async def a_signin_callback(request: Request | HttpRequest) -> HttpResponseRedirect:
+    """Asynchronous callback for signing in.
+
+    Args:
+        request (Request | HttpRequest): The request to the server
+
+    Raises:
+        NotAuthenticated: Could not authenticate the user
+
+    Returns:
+        HttpResponseRedirect: Redirect the request to the post-auth page
+    """
+    keycloak = KeycloakOpenID(
+        server_url=settings.KEYCLOAK_SERVER,
+        realm_name=settings.KEYCLOAK_REALM,
+        client_id=settings.KEYCLOAK_CLIENT,
+    )
+    if code := request.query_params.get("code"):
+        try:
+            callback_url = settings.KEYCLOAK_REDIRECT_URI
+            user_token = await keycloak.a_token(
+                code=code,
+                grant_type=["authorization_code"],
+                redirect_uri=callback_url,
+            )
+            user_info = await keycloak.a_decode_token(user_token["access_token"])
+            UserModel = get_user_model()
+            await UserModel.objects.aget_or_create(
+                username=user_info["preferred_username"], email=user_info["email"]
+            )
+
+        except JWTExpired:
+            raise NotAuthenticated("Token expired")
+        except KeycloakPostError:
+            return Response(
+                data={"detail": "Invalid token call"},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+    return redirect(settings.KEYCLOAK_POST_AUTH_REDIRECT_URI)
+
+
+@api_view(["GET"])
+def signin_callback(request: Request | HttpRequest) -> HttpResponseRedirect:
+    """Callback for signing in.
+
+    Args:
+        request (Request | HttpRequest): The request to the server
+
+    Raises:
+        NotAuthenticated: Could not authenticate the user
+
+    Returns:
+        HttpResponseRedirect: Redirect the request to the post-auth page
+    """
+    keycloak = KeycloakOpenID(
+        server_url=settings.KEYCLOAK_SERVER,
+        realm_name=settings.KEYCLOAK_REALM,
+        client_id=settings.KEYCLOAK_CLIENT,
+    )
+    if code := request.query_params.get("code"):
+        try:
+            callback_url = settings.KEYCLOAK_REDIRECT_URI
+            user_token = keycloak.token(
+                code=code,
+                grant_type=["authorization_code"],
+                redirect_uri=callback_url,
+            )
+            user_info = keycloak.decode_token(user_token["access_token"])
+            UserModel = get_user_model()
+            UserModel.objects.get_or_create(
+                username=user_info["preferred_username"], email=user_info["email"]
+            )
+
+        except JWTExpired:
+            raise NotAuthenticated("Token expired")
+        except KeycloakPostError:
+            return Response(
+                data={"detail": "Invalid token call"},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+    return redirect(settings.KEYCLOAK_POST_AUTH_REDIRECT_URI)
