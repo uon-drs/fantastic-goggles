@@ -124,3 +124,39 @@ async def a_get_token(request: Request | HttpRequest) -> Response:
             data={"detail": "Unable to request auth token from OIDC provider"},
             status=status.HTTP_500_INTERNAL_SERVER_ERROR,
         )
+
+
+@async_api_view(["POST"])
+async def a_refresh_token(request: Request | HttpRequest) -> Response:
+    """Asynchronously refresh the user tokens.
+
+    Args:
+        request (HttpRequest): The request to the server
+
+    Returns:
+        Response: The response containing the new tokens and status code
+    """
+    keycloak = KeycloakOpenID(
+        server_url=settings.KEYCLOAK_SERVER,
+        realm_name=settings.KEYCLOAK_REALM,
+        client_id=settings.KEYCLOAK_CLIENT,
+    )
+
+    if refresh := request.data.get("refresh_token"):
+        try:
+            new_token = await keycloak.a_refresh_token(refresh_token=refresh)
+            return Response(data=new_token, status=status.HTTP_200_OK)
+        except KeycloakPostError:
+            return Response(
+                data={"detail": "Invalid refresh token"},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        except Exception:
+            return Response(
+                data={"detail": "Unable to refresh the user token"},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            )
+
+    return Response(
+        data={"detail": "No refresh token in body"}, tatus=status.HTTP_400_BAD_REQUEST
+    )
