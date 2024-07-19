@@ -79,7 +79,7 @@ async def a_signin_callback(request: Request | HttpRequest) -> HttpResponseRedir
 
 
 @async_api_view(["POST"])
-async def a_get_token(request: Request) -> Response:
+async def a_get_token(request: Request | HttpRequest) -> Response:
     """Asynchronously get user tokens from Keycloak.
 
     Args:
