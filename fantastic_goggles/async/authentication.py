@@ -8,9 +8,9 @@ from django.conf import settings
 from jwcrypto.jwt import JWTExpired
 
 
-class OIDCAuthentication(BaseAuthentication):
-    def authenticate(self, request: HttpRequest) -> tuple[AbstractBaseUser, None]:
-        """Authenticate a user using the OIDC protocol.
+class OIDCAuthenticationAsync(BaseAuthentication):
+    async def authenticate(self, request: HttpRequest) -> tuple[AbstractBaseUser, None]:
+        """Asynchronously authenticate a user using the OIDC protocol.
 
         Args:
             request (HttpRequest): The request to authenticate.
@@ -31,14 +31,14 @@ class OIDCAuthentication(BaseAuthentication):
         )
 
         try:
-            user_info = keycloak.decode_token(token)
+            user_info = await keycloak.a_decode_token(token)
         except JWTExpired:
             raise AuthenticationFailed("Token expired")
 
         UserModel = get_user_model()
 
         try:
-            user = UserModel.objects.get(username=user_info["preferred_username"])
+            user = await UserModel.objects.aget(username=user_info["preferred_username"])
         except UserModel.DoesNotExist:
             raise AuthenticationFailed("User does not exist")
 
