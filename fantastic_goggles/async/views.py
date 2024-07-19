@@ -1,10 +1,11 @@
+import base64
 import uuid
 from django.conf import settings
 from django.http import HttpResponseRedirect
 from django.contrib.auth import get_user_model
 from django.shortcuts import redirect
 from django.urls import reverse
-from keycloak import KeycloakOpenID, KeycloakPostError
+from keycloak import KeycloakAuthenticationError, KeycloakOpenID, KeycloakPostError
 from rest_framework.response import Response
 from rest_framework.request import Request, HttpRequest
 from rest_framework import status
@@ -75,3 +76,51 @@ async def a_signin_callback(request: Request | HttpRequest) -> HttpResponseRedir
                 status=status.HTTP_400_BAD_REQUEST,
             )
     return redirect(settings.KEYCLOAK_POST_AUTH_REDIRECT_URI)
+
+
+@async_api_view(["POST"])
+async def a_get_token(request: Request) -> Response:
+    """Asynchronously get user tokens from Keycloak.
+
+    Args:
+        request (HttpRequest): The request to the server
+
+    Returns:
+        Response: The response containing the tokens and status code
+    """
+    keycloak = KeycloakOpenID(
+        server_url=settings.KEYCLOAK_SERVER,
+        realm_name=settings.KEYCLOAK_REALM,
+        client_id=settings.KEYCLOAK_CLIENT,
+    )
+    auth = request.headers.get("Authorization")
+    if not auth:
+        return Response(
+            data={"detail": "Request did not contain the Authorization header"},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+
+    try:
+        credentials = auth.removeprefix("Basic ")
+        decoded_credentials = base64.b64decode(credentials)
+        username, password = decoded_credentials.decode().split(":")
+        result = await keycloak.a_token(username=username, password=password)
+        return Response(data=result, status=status.HTTP_200_OK)
+
+    except ValueError:
+        return Response(
+            data={
+                "detail": "The Authorization header is incorrect. This endpoint requires Basic Authorization"
+            },
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+    except KeycloakAuthenticationError:
+        return Response(
+            data={"detail": "User credentials are invalid"},
+            status=status.HTTP_401_UNAUTHORIZED,
+        )
+    except Exception:
+        return Response(
+            data={"detail": "Unable to request auth token from OIDC provider"},
+            status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+        )
