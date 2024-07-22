@@ -161,7 +161,7 @@ def refresh_token(request: Request | HttpRequest) -> Response:
 
 
 @api_view(["POST"])
-def logout(request: Request) -> Response:
+def logout(request: Request | HttpRequest) -> Response:
     """Log the user out.
 
     Args:
@@ -176,7 +176,7 @@ def logout(request: Request) -> Response:
         client_id=settings.KEYCLOAK_CLIENT,
     )
 
-    if refresh := request.POST.get("refresh_token"):
+    if refresh := request.data.get("refresh_token"):
         try:
             keycloak.logout(refresh_token=refresh)
             return Response(data=None, status=status.HTTP_204_NO_CONTENT)
