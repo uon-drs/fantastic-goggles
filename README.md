@@ -57,9 +57,9 @@ NB: You do not have to set the path to `"auth/"`, but what you choose **must** e
 ## Adding OIDC Auth to a DRF view
 - Class-based views:
 ```python
+from fantastic_goggles.sync.authentication import OIDCAuthentication
 from .serializers import MyModelSerializer
 from .models import MyModel
-from fantastic_goggles.sync.authentication import OIDCAuthentication
 
 
 class MyViewSet(ModelViewSet):
