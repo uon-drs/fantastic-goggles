@@ -53,3 +53,36 @@ NB: You do not have to set the path to `"auth/"`, but what you choose **must** e
 - `POST` `[auth]/token`: get an access and refresh token to access protected resources
 - `POST` `[auth]/refresh`: refresh an access token using the refresh token
 - `POST` `[auth]/logout`: log the user out of the current Keycloak session
+
+## Adding OIDC Auth to a DRF view
+- Class-based views:
+```python
+from .serializers import MyModelSerializer
+from .models import MyModel
+from fantastic_goggles.sync.authentication import OIDCAuthentication
+
+
+class MyViewSet(ModelViewSet):
+    serializer_class = MyModelSerializer
+    queryset = MyModel.objects.all()
+    authentication_classes = [OIDCAuthentication]
+```
+
+- Function-based views
+```python
+from rest_framework.decorators import api_view, authentication_classes
+from fantastic_goggles.sync.authentication import OIDCAuthentication
+from .serializers import MyModelSerializer
+from .models import MyModel
+
+
+@api_view(["GET"])
+@authentication_classes([OIDCAuthentication])
+def test_something(request: Request) -> Response:
+    my_models = MyModel.objects.all()
+    serializer = MyModelSerializer(my_models)
+    return Response(
+        data=serializer.data,
+        status=status.HTTP_200_OK,
+    )
+```
