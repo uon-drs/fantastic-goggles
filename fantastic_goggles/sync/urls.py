@@ -7,4 +7,5 @@ urlpatterns = [
     path("callback", views.signin_callback, name="callback"),
     path("token", views.get_token, name="get_token"),
     path("refresh", views.refresh_token, name="refresh"),
+    path("logout", views.logout, name="logout"),
 ]

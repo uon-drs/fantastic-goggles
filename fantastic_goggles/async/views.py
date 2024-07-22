@@ -160,3 +160,39 @@ async def a_refresh_token(request: Request | HttpRequest) -> Response:
     return Response(
         data={"detail": "No refresh token in body"}, status=status.HTTP_400_BAD_REQUEST
     )
+
+
+@async_api_view(["POST"])
+async def a_logout(request: Request | HttpRequest) -> Response:
+    """Asynchronously log the user out.
+
+    Args:
+        request (HttpRequest): The request to the server
+
+    Returns:
+        Response: The response containing the status code only
+    """
+    keycloak = KeycloakOpenID(
+        server_url=settings.KEYCLOAK_SERVER,
+        realm_name=settings.KEYCLOAK_REALM,
+        client_id=settings.KEYCLOAK_CLIENT,
+    )
+
+    if refresh := request.data.get("refresh_token"):
+        try:
+            await keycloak.a_logout(refresh_token=refresh)
+            return Response(data=None, status=status.HTTP_204_NO_CONTENT)
+        except KeycloakPostError:
+            return Response(
+                data={"detail": "Invalid refresh token"},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        except Exception:
+            return Response(
+                data={"detail": "Unable to logout"},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            )
+
+    return Response(
+        data={"detail": "No refresh token in body"}, status=status.HTTP_400_BAD_REQUEST
+    )
