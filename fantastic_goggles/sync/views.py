@@ -1,10 +1,11 @@
+import base64
 import uuid
 from django.conf import settings
 from django.http import HttpResponseRedirect
 from django.contrib.auth import get_user_model
 from django.shortcuts import redirect
 from django.urls import reverse
-from keycloak import KeycloakOpenID, KeycloakPostError
+from keycloak import KeycloakAuthenticationError, KeycloakOpenID, KeycloakPostError
 from rest_framework.response import Response
 from rest_framework.request import Request, HttpRequest
 from rest_framework import status
@@ -73,3 +74,87 @@ def signin_callback(request: Request | HttpRequest) -> HttpResponseRedirect:
                 status=status.HTTP_400_BAD_REQUEST,
             )
     return redirect(settings.KEYCLOAK_POST_AUTH_REDIRECT_URI)
+
+
+@api_view(["POST"])
+def get_token(request: Request | HttpRequest) -> Response:
+    """Get user tokens from Keycloak.
+
+    Args:
+        request (HttpRequest): The request to the server
+
+    Returns:
+        Response: The response containing the tokens and status code
+    """
+    keycloak = KeycloakOpenID(
+        server_url=settings.KEYCLOAK_SERVER,
+        realm_name=settings.KEYCLOAK_REALM,
+        client_id=settings.KEYCLOAK_CLIENT,
+    )
+    auth = request.headers.get("Authorization")
+    if not auth:
+        return Response(
+            data={"detail": "Request did not contain the Authorization header"},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+
+    try:
+        credentials = auth.removeprefix("Basic ")
+        decoded_credentials = base64.b64decode(credentials)
+        username, password = decoded_credentials.decode().split(":")
+        result = keycloak.token(username=username, password=password)
+        return Response(data=result, status=status.HTTP_200_OK)
+
+    except ValueError:
+        return Response(
+            data={
+                "detail": "The Authorization header is incorrect. This endpoint requires Basic Authorization"
+            },
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+    except KeycloakAuthenticationError:
+        return Response(
+            data={"detail": "User credentials are invalid"},
+            status=status.HTTP_401_UNAUTHORIZED,
+        )
+    except Exception:
+        return Response(
+            data={"detail": "Unable to request auth token from OIDC provider"},
+            status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+        )
+
+
+@api_view(["POST"])
+def refresh_token(request: Request | HttpRequest) -> Response:
+    """Refresh the user tokens.
+
+    Args:
+        request (HttpRequest): The request to the server
+
+    Returns:
+        Response: The response containing the new tokens and status code
+    """
+    keycloak = KeycloakOpenID(
+        server_url=settings.KEYCLOAK_SERVER,
+        realm_name=settings.KEYCLOAK_REALM,
+        client_id=settings.KEYCLOAK_CLIENT,
+    )
+
+    if refresh := request.data.get("refresh_token"):
+        try:
+            new_token = keycloak.refresh_token(refresh_token=refresh)
+            return Response(data=new_token, status=status.HTTP_200_OK)
+        except KeycloakPostError:
+            return Response(
+                data={"detail": "Invalid refresh token"},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        except Exception:
+            return Response(
+                data={"detail": "Unable to refresh the user token"},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            )
+
+    return Response(
+        data={"detail": "No refresh token in body"}, status=status.HTTP_400_BAD_REQUEST
+    )
