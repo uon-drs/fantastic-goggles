@@ -46,3 +46,10 @@ NB: You do not have to set the path to `"auth/"`, but what you choose **must** e
 - KEYCLOAK_REALM: the realm on the Keycloak host where your client is configured
 - KEYCLOAK_CLIENT: the name of the Django app's client on the Keycloak realm
 - KEYCLOAK_POST_AUTH_REDIRECT_URI: the URI to redirect to upon successful login using the code grant flow
+
+## Endpoints
+- `GET` `[auth]/auth`: navigate here in the browser to trigger the code grant flow. You will get first redirected to your Keycloak realm's sign-in/register page. Upon successful sign-in/registration, you will be redirected to the page set by `KEYCLOAK_POST_AUTH_REDIRECT_URI` above
+- `GET` `[auth]/callback`: **do not** use this directly. It is purely for use for the code grant flow
+- `POST` `[auth]/token`: get an access and refresh token to access protected resources
+- `POST` `[auth]/refresh`: refresh an access token using the refresh token
+- `POST` `[auth]/logout`: log the user out of the current Keycloak session
