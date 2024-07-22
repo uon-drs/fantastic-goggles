@@ -156,5 +156,5 @@ def refresh_token(request: Request | HttpRequest) -> Response:
             )
 
     return Response(
-        data={"detail": "No refresh token in body"}, tatus=status.HTTP_400_BAD_REQUEST
+        data={"detail": "No refresh token in body"}, status=status.HTTP_400_BAD_REQUEST
     )
