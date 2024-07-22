@@ -38,6 +38,7 @@ urlpatterns = [
     ...
 ]
 ```
+NB: You do not have to set the path to `"auth/"`, but what you choose **must** end in a `/`.
 
 ## Configuration
 `fantastic-goggles` requires the following variables to be set in the environment:
