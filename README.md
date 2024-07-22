@@ -10,9 +10,7 @@ pip install git+https://github.com/uon-drs/fantastic-goggles.git
 - Add to `pyproject.toml` (Poetry example)
 ```toml
 [tool.poetry.dependencies]
-...
 fantastic-goggles = { git = "https://github.com/uon-drs/fantastic-goggles.git" }
-...
 ```
 
 ## Add to Django app
