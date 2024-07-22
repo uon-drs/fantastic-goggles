@@ -38,3 +38,10 @@ urlpatterns = [
     ...
 ]
 ```
+
+## Configuration
+`fantastic-goggles` requires the following variables to be set in the environment:
+- KEYCLOAK_SERVER: the Keycloak host
+- KEYCLOAK_REALM: the realm on the Keycloak host where your client is configured
+- KEYCLOAK_CLIENT: the name of the Django app's client on the Keycloak realm
+- KEYCLOAK_POST_AUTH_REDIRECT_URI: the URI to redirect to upon successful login using the code grant flow
